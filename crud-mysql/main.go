@@ -13,9 +13,9 @@ import (
 )
 
 type employee struct {
-	City string `json:"city"`
 	ID   int    `json:"id"`
 	Name string `json:"name"`
+	City string `json:"city"`
 }
 
 func createEmployee(w http.ResponseWriter, r *http.Request) {
@@ -71,9 +71,39 @@ func dbConn() (db *sql.DB) {
 	return db
 }
 
+func getEmployees(w http.ResponseWriter, r *http.Request) {
+	db := dbConn()
+	defer db.Close()
+
+	rows, err := db.Query("SELECT * FROM employee ORDER BY id ASC")
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	employees := []employee{}
+
+	for rows.Next() {
+		var id int
+		var name, city string
+
+		err := rows.Scan(&id, &name, &city)
+
+		if err != nil {
+			panic(err.Error())
+		}
+
+		employee := employee{id, name, city}
+		employees = append(employees, employee)
+	}
+
+	json.NewEncoder(w).Encode(employees)
+}
+
 func main() {
 	router := mux.NewRouter()
 
+	router.HandleFunc("/employees", getEmployees).Methods("GET")
 	router.HandleFunc("/employees", createEmployee).Methods("POST")
 	router.HandleFunc("/employees/{id}", deleteEmployee).Methods("DELETE")
 
