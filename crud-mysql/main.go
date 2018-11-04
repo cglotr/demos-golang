@@ -23,7 +23,6 @@ func createEmployee(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 
 	var employee employee
-	log.Println(r.Body)
 	_ = json.NewDecoder(r.Body).Decode(&employee)
 	st, err := db.Prepare("INSERT INTO employee (name, city) VALUES (?,?)")
 
@@ -71,6 +70,44 @@ func dbConn() (db *sql.DB) {
 	return db
 }
 
+func getEmployee(w http.ResponseWriter, r *http.Request) {
+	db := dbConn()
+	defer db.Close()
+
+	params := mux.Vars(r)
+	employeeID, err := strconv.Atoi(params["id"])
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	rows, err := db.Query("SELECT * FROM employee WHERE id = ?", employeeID)
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	employee := employee{}
+
+	if rows.Next() {
+		var id int
+		var name string
+		var city string
+
+		err := rows.Scan(&id, &name, &city)
+
+		if err != nil {
+			panic(err.Error())
+		}
+
+		employee.ID = id
+		employee.Name = name
+		employee.City = city
+	}
+
+	json.NewEncoder(w).Encode(employee)
+}
+
 func getEmployees(w http.ResponseWriter, r *http.Request) {
 	db := dbConn()
 	defer db.Close()
@@ -105,6 +142,7 @@ func main() {
 
 	router.HandleFunc("/employees", getEmployees).Methods("GET")
 	router.HandleFunc("/employees", createEmployee).Methods("POST")
+	router.HandleFunc("/employees/{id}", getEmployee).Methods("GET")
 	router.HandleFunc("/employees/{id}", deleteEmployee).Methods("DELETE")
 
 	http.ListenAndServe(":8000", router)
