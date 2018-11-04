@@ -31,6 +31,7 @@ func createEmployee(w http.ResponseWriter, r *http.Request) {
 	}
 
 	st.Exec(employee.Name, employee.City)
+	json.NewEncoder(w).Encode(employee)
 	log.Printf("INSERT employee name: %s, city: %s\n", employee.Name, employee.City)
 }
 
@@ -105,6 +106,7 @@ func getEmployee(w http.ResponseWriter, r *http.Request) {
 		employee.City = city
 	}
 
+	log.Printf("SELECT employee id: %d\n", employee.ID)
 	json.NewEncoder(w).Encode(employee)
 }
 
@@ -134,6 +136,7 @@ func getEmployees(w http.ResponseWriter, r *http.Request) {
 		employees = append(employees, employee)
 	}
 
+	log.Println("SELECT all employees")
 	json.NewEncoder(w).Encode(employees)
 }
 
@@ -180,6 +183,7 @@ func updateEmployee(w http.ResponseWriter, r *http.Request) {
 		st.Exec(employee.Name, employee.City, employeeID)
 	}
 
+	log.Printf("UPDATE employee id: %d\n", employeeID)
 	json.NewEncoder(w).Encode(employee)
 }
 
