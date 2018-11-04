@@ -137,12 +137,59 @@ func getEmployees(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(employees)
 }
 
+func updateEmployee(w http.ResponseWriter, r *http.Request) {
+	db := dbConn()
+	defer db.Close()
+
+	params := mux.Vars(r)
+	employeeID, err := strconv.Atoi(params["id"])
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	rows, err := db.Query("SELECT name, city FROM employee WHERE id = ?", employeeID)
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	employee := employee{}
+	json.NewDecoder(r.Body).Decode(&employee)
+
+	if rows.Next() {
+		var name string
+		var city string
+		rows.Scan(&name, &city)
+		employee.ID = employeeID
+
+		if employee.Name == "" {
+			employee.Name = name
+		}
+
+		if employee.City == "" {
+			employee.City = city
+		}
+
+		st, err := db.Prepare("UPDATE employee SET name = ?, city = ? WHERE id = ?")
+
+		if err != nil {
+			panic(err.Error())
+		}
+
+		st.Exec(employee.Name, employee.City, employeeID)
+	}
+
+	json.NewEncoder(w).Encode(employee)
+}
+
 func main() {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/employees", getEmployees).Methods("GET")
 	router.HandleFunc("/employees", createEmployee).Methods("POST")
 	router.HandleFunc("/employees/{id}", getEmployee).Methods("GET")
+	router.HandleFunc("/employees/{id}", updateEmployee).Methods("PATCH")
 	router.HandleFunc("/employees/{id}", deleteEmployee).Methods("DELETE")
 
 	http.ListenAndServe(":8000", router)
