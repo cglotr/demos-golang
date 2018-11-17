@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -30,6 +31,7 @@ var products = []product{
 		Slug:        "test-002",
 	},
 }
+var signingKey = []byte("secret")
 
 func main() {
 	r := mux.NewRouter()
@@ -38,12 +40,24 @@ func main() {
 	r.PathPrefix("/static/").Handler(
 		http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
 
+	r.Handle("/get-token", getTokenHandler).Methods("GET")
 	r.Handle("/products", productsHandler).Methods("GET")
 	r.Handle("/products/{slug}/feedback", postProductFeedbackHandler).Methods("POST")
 	r.Handle("/status", statusHandler).Methods("GET")
 
 	http.ListenAndServe(":3000", handlers.LoggingHandler(os.Stdout, r))
 }
+
+var getTokenHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	token := jwt.New(jwt.SigningMethodHS256)
+
+	claims := token.Claims.(jwt.MapClaims)
+	claims["name"] = "Faithes"
+
+	tokenString, _ := token.SignedString(signingKey)
+
+	w.Write([]byte(tokenString))
+})
 
 var notImplemented = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Not Implemented"))
