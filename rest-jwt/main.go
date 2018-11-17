@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -41,8 +42,11 @@ func main() {
 		http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
 
 	r.Handle("/get-token", getTokenHandler).Methods("GET")
-	r.Handle("/products", productsHandler).Methods("GET")
-	r.Handle("/products/{slug}/feedback", postProductFeedbackHandler).Methods("POST")
+	r.Handle("/products", jwtHandler.Handler(productsHandler)).Methods("GET")
+	r.Handle(
+		"/products/{slug}/feedback",
+		jwtHandler.Handler(postProductFeedbackHandler),
+	).Methods("POST")
 	r.Handle("/status", statusHandler).Methods("GET")
 
 	http.ListenAndServe(":3000", handlers.LoggingHandler(os.Stdout, r))
@@ -57,6 +61,13 @@ var getTokenHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 	tokenString, _ := token.SignedString(signingKey)
 
 	w.Write([]byte(tokenString))
+})
+
+var jwtHandler = jwtmiddleware.New(jwtmiddleware.Options{
+	SigningMethod: jwt.SigningMethodHS256,
+	ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
+		return signingKey, nil
+	},
 })
 
 var notImplemented = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
