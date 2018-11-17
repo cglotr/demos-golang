@@ -40,7 +40,7 @@ func main() {
 
 	r.Handle("/products", productsHandler).Methods("GET")
 	r.Handle("/products/{slug}/feedback", postProductFeedbackHandler).Methods("POST")
-	r.Handle("/status", notImplemented).Methods("GET")
+	r.Handle("/status", statusHandler).Methods("GET")
 
 	http.ListenAndServe(":3000", handlers.LoggingHandler(os.Stdout, r))
 }
@@ -74,4 +74,9 @@ var productsHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 	payload, _ := json.Marshal(products)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(payload))
+})
+
+var statusHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte("API server is up & running"))
 })
