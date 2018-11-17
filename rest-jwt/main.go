@@ -39,7 +39,7 @@ func main() {
 		http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
 
 	r.Handle("/products", productsHandler).Methods("GET")
-	r.Handle("/products/{slug}/feedback", notImplemented).Methods("POST")
+	r.Handle("/products/{slug}/feedback", postProductFeedbackHandler).Methods("POST")
 	r.Handle("/status", notImplemented).Methods("GET")
 
 	http.ListenAndServe(":3000", handlers.LoggingHandler(os.Stdout, r))
@@ -47,6 +47,27 @@ func main() {
 
 var notImplemented = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Not Implemented"))
+})
+
+var postProductFeedbackHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var product product
+	vars := mux.Vars(r)
+	slug := vars["slug"]
+
+	for _, p := range products {
+		if p.Slug == slug {
+			product = p
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if product.Slug != "" {
+		payload, _ := json.Marshal(product)
+		w.Write([]byte(payload))
+	} else {
+		w.Write([]byte("Product Not Found"))
+	}
 })
 
 var productsHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
