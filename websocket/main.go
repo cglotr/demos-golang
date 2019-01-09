@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/websocket"
 )
@@ -10,6 +11,7 @@ import (
 // TAG ...
 var TAG = "MAIN"
 
+var currID = 0
 var upgrader = websocket.Upgrader{}
 
 func main() {
@@ -24,16 +26,34 @@ func echo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
+
+	currID++
+	myID := currID
+
+	writeMsgString(conn, "Your ID is "+strconv.Itoa(myID)+".")
+
 	for {
 		mt, msg, err := conn.ReadMessage()
 		if err != nil {
 			log.Println(TAG, "ReadMessage", err)
 			break
 		}
-		err = conn.WriteMessage(mt, msg)
-		if err != nil {
-			log.Println(TAG, "WriteMessage", err)
+
+		if w := writeMsg(conn, mt, msg); !w {
 			break
 		}
 	}
+}
+
+func writeMsg(conn *websocket.Conn, msgType int, msg []byte) bool {
+	err := conn.WriteMessage(msgType, msg)
+	if err != nil {
+		log.Println(TAG, "WriteMessage", err)
+		return false
+	}
+	return true
+}
+
+func writeMsgString(conn *websocket.Conn, msg string) bool {
+	return writeMsg(conn, 1, []byte(msg))
 }
