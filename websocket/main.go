@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -11,6 +12,8 @@ import (
 // TAG ...
 var TAG = "MAIN"
 
+var ch = make(chan []byte)
+var clients = 0
 var currID = 0
 var upgrader = websocket.Upgrader{}
 
@@ -19,28 +22,52 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
+func broadcast(conn *websocket.Conn, myID int) {
+	for {
+		m := <-ch
+		msg := string(m[:len(m)])
+		senderID, err := strconv.Atoi(strings.Split(msg, ":")[0])
+
+		if err != nil {
+			continue
+		}
+
+		if myID != senderID {
+			writeMsgString(conn, msg)
+		}
+	}
+}
+
 func echo(w http.ResponseWriter, r *http.Request) {
+	clients++
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(TAG, "Upgrade", err)
 		return
 	}
 	defer conn.Close()
+	defer func() { clients-- }()
 
 	currID++
 	myID := currID
 
 	writeMsgString(conn, "Your ID is "+strconv.Itoa(myID)+".")
+	go broadcast(conn, myID)
 
 	for {
-		mt, msg, err := conn.ReadMessage()
+		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			log.Println(TAG, "ReadMessage", err)
 			break
 		}
 
-		if w := writeMsg(conn, mt, msg); !w {
-			break
+		m := []byte{}
+		m = append(m, []byte(strconv.Itoa(myID)+": ")...)
+		m = append(m, msg...)
+
+		for i := 0; i < clients; i++ {
+			ch <- m
 		}
 	}
 }
