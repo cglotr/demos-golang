@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/cglotr/websocket"
+	"github.com/gorilla/mux"
 )
 
 var broadcastChan = make(chan string)
@@ -12,9 +13,12 @@ var clients = make(map[*websocket.Conn]bool)
 var upgrader = websocket.Upgrader{}
 
 func main() {
-	http.HandleFunc("/chat", chat)
+	router := mux.NewRouter()
+	router.HandleFunc("/chat", chat)
+
 	go broadcast()
-	log.Fatal(http.ListenAndServe(":8080", nil))
+
+	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
 func broadcast() {
