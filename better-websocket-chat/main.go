@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/cglotr/websocket"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 )
 
 var broadcastChan = make(chan string, 2)
